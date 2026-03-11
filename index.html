@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeamFlow — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#fdf5ec;--surface:#ffffff;--surface2:#fdf0e4;--border:#e8d5c0;--maroon:#6b1a1a;--maroon2:#8b2525;--navy:#1e3a6e;--sold:#c94040;--sold-bg:#fdf0f0;--avail:#2e7d52;--avail-bg:#edf7f2;--amber:#c47f17;--amber-bg:#fef8ec;--text:#2c1a0e;--muted:#8a7060;--gold:#d4a843;--radius:12px;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;}
+
+  #setupBanner{background:#1e3a6e;color:#fff;padding:12px 24px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  #scriptUrlWrap{display:flex;gap:8px;align-items:center;flex:1;max-width:600px;}
+  #scriptUrlInput{flex:1;padding:7px 12px;border-radius:8px;border:none;font-size:13px;font-family:'Nunito',sans-serif;outline:none;}
+  #saveUrlBtn{padding:7px 16px;background:var(--gold);border:none;border-radius:8px;color:#3a1a00;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;}
+  #initBtn{padding:7px 16px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;font-size:13px;}
+  #initBtn:hover{background:rgba(255,255,255,.3);}
+
+  #loadingOverlay{position:fixed;inset:0;background:rgba(253,245,236,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(2px);}
+  .spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--maroon);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:14px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{color:var(--muted);font-size:14px;font-weight:600;}
+
+  #loginPage{min-height:calc(100vh - 52px);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#5a1515 0%,#7a2020 50%,#a83232 100%);position:relative;overflow:hidden;}
+  #loginPage::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 60% at 80% 20%,rgba(212,168,67,.18) 0%,transparent 60%);}
+  .login-box{background:#fff;border-radius:20px;padding:48px 44px;width:420px;max-width:95vw;box-shadow:0 40px 100px rgba(0,0,0,.35);animation:fadeUp .5s ease both;position:relative;z-index:1;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+  .login-logo{font-family:'Playfair Display',serif;font-size:30px;color:var(--maroon);margin-bottom:3px;display:flex;align-items:center;gap:8px;}
+  .logo-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);}
+  .admin-badge{display:inline-block;background:rgba(107,26,26,.1);border:1.5px solid rgba(107,26,26,.2);color:var(--maroon);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:26px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+  .field input{width:100%;padding:12px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:.2s;}
+  .field input:focus{border-color:var(--maroon);box-shadow:0 0 0 3px rgba(107,26,26,.1);}
+  .btn{width:100%;padding:14px;background:var(--maroon);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Nunito',sans-serif;}
+  .btn:hover{background:var(--maroon2);transform:translateY(-1px);}
+  .btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none;}
+  .login-link{text-align:center;margin-top:18px;font-size:13px;color:var(--muted);}
+  .login-link a{color:var(--navy);text-decoration:none;font-weight:700;}
+  .error-msg{background:#fef2f2;border:1.5px solid #fca5a5;color:var(--sold);padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;font-weight:600;}
+
+  #appPage{display:none;flex-direction:column;min-height:100vh;}
+  header{background:linear-gradient(90deg,#4a1010 0%,var(--maroon) 50%,var(--maroon2) 100%);padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,.25);}
+  .logo{font-family:'Playfair Display',serif;font-size:22px;color:#fff;}
+  .logo-tag{background:var(--gold);color:#3a1a00;font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:10px;margin-left:10px;vertical-align:middle;}
+  .header-right{display:flex;align-items:center;gap:14px;}
+  .logout-btn{padding:7px 16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;color:#fff;font-size:13px;cursor:pointer;transition:.2s;font-family:'Nunito',sans-serif;font-weight:600;}
+  .logout-btn:hover{background:rgba(255,255,255,.25);}
+  .notif-wrap{position:relative;cursor:pointer;font-size:20px;}
+  .notif-dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:var(--sold);border-radius:50%;border:2px solid #4a1010;display:none;}
+  .refresh-btn{padding:7px 14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:8px;color:#fff;font-size:12px;cursor:pointer;transition:.2s;font-family:'Nunito',sans-serif;font-weight:600;}
+  .refresh-btn:hover{background:rgba(255,255,255,.25);}
+  .main{display:flex;flex:1;}
+  nav{width:230px;background:var(--surface);border-right:1.5px solid var(--border);padding:22px 12px;flex-shrink:0;}
+  .nav-section{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 14px;margin:18px 0 6px;}
+  .nav-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);transition:.15s;margin-bottom:3px;}
+  .nav-item:hover{background:var(--surface2);color:var(--text);}
+  .nav-item.active{background:rgba(107,26,26,.08);color:var(--maroon);}
+  .nav-left{display:flex;align-items:center;gap:9px;}
+  .nav-count{background:var(--sold);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;}
+  .content{flex:1;padding:30px;overflow-y:auto;}
+  .page{display:none;animation:fadeUp .3s ease;}
+  .page.active{display:block;}
+  .page-title{font-family:'Playfair Display',serif;font-size:26px;margin-bottom:4px;color:var(--maroon);}
+  .page-sub{color:var(--muted);font-size:14px;margin-bottom:24px;font-weight:500;}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:20px 18px;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+  .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:4px 4px 0 0;}
+  .stat-card.gold-top::after{background:var(--gold);}
+  .stat-card.green-top::after{background:var(--avail);}
+  .stat-card.blue-top::after{background:var(--navy);}
+  .stat-card.red-top::after{background:var(--sold);}
+  .stat-num{font-family:'Playfair Display',serif;font-size:36px;margin:6px 0 3px;}
+  .stat-label{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
+
+  .filters{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .filter-btn{padding:7px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:20px;color:var(--muted);font-size:13px;cursor:pointer;transition:.2s;font-family:'Nunito',sans-serif;font-weight:600;}
+  .filter-btn:hover{border-color:var(--muted);color:var(--text);}
+  .filter-btn.active{background:rgba(107,26,26,.08);border-color:var(--maroon);color:var(--maroon);}
+
+  .request-list{display:flex;flex-direction:column;gap:10px;}
+  .request-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+  .request-card:hover{border-color:rgba(107,26,26,.25);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+  .req-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+  .req-name{font-weight:700;font-size:15px;margin-bottom:4px;}
+  .req-meta{font-size:13px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .req-actions{display:flex;gap:8px;flex-shrink:0;}
+  .act-btn{padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Nunito',sans-serif;border:none;}
+  .approve-btn{background:var(--avail-bg);color:var(--avail);border:1.5px solid rgba(46,125,82,.25);}
+  .approve-btn:hover{background:#d4f0e2;border-color:var(--avail);}
+  .deny-btn{background:var(--sold-bg);color:var(--sold);border:1.5px solid rgba(201,64,64,.2);}
+  .deny-btn:hover{background:#fadede;border-color:var(--sold);}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .badge-pending{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(196,127,23,.2);}
+  .badge-approved{background:var(--avail-bg);color:var(--avail);border:1px solid rgba(46,125,82,.2);}
+  .badge-denied{background:var(--sold-bg);color:var(--sold);border:1px solid rgba(201,64,64,.2);}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty-icon{font-size:40px;margin-bottom:12px;}
+
+  .table-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+  table{width:100%;border-collapse:collapse;}
+  thead{background:var(--maroon);}
+  th{padding:13px 18px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.85);}
+  td{padding:13px 18px;border-top:1px solid var(--border);font-size:14px;}
+  tr:hover td{background:var(--surface2);}
+  .progress-bar{height:6px;background:var(--surface2);border-radius:3px;margin-top:6px;overflow:hidden;border:1px solid var(--border);}
+  .progress-fill{height:100%;border-radius:3px;transition:.4s;}
+
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .cal-nav{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:8px 16px;cursor:pointer;color:var(--maroon);font-size:14px;font-weight:700;transition:.2s;font-family:'Nunito',sans-serif;}
+  .cal-nav:hover{border-color:var(--maroon);background:rgba(107,26,26,.05);}
+  .cal-month{font-family:'Playfair Display',serif;font-size:22px;color:var(--maroon);}
+  .cal-grid{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+  .cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);background:var(--maroon);}
+  .cal-day-name{padding:11px;text-align:center;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.85);}
+  .cal-cells{display:grid;grid-template-columns:repeat(7,1fr);}
+  .cal-cell{min-height:88px;padding:8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .cal-cell.today{background:rgba(30,58,110,.06);}
+  .cal-cell.other-month{opacity:.35;background:#faf5f0;}
+  .cell-num{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .cal-cell.today .cell-num{color:var(--navy);}
+  .cell-sunday .cell-num{color:var(--sold);}
+  .cell-tags{display:flex;flex-direction:column;gap:3px;}
+  .mini-tag{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mt-pending{background:var(--amber-bg);color:var(--amber);}
+  .mt-approved{background:var(--avail-bg);color:var(--avail);}
+  .mt-leave{background:rgba(30,58,110,.08);color:var(--navy);}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600;}
+  .legend-dot{width:10px;height:10px;border-radius:3px;}
+
+  #toast{position:fixed;bottom:28px;right:28px;background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:13px 20px;font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.12);transform:translateY(20px);opacity:0;transition:.3s;z-index:400;}
+  #toast.show{transform:none;opacity:1;}
+  #toast.success{border-color:var(--avail);color:var(--avail);background:var(--avail-bg);}
+  #toast.error{border-color:var(--sold);color:var(--sold);background:var(--sold-bg);}
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;background:var(--surface2);color:var(--muted);}
+  .gs-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(46,125,82,.15);border:1px solid rgba(46,125,82,.3);color:#6ee7b7;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:10px;}
+  .last-sync{font-size:11px;color:rgba(255,255,255,.5);font-weight:500;}
+</style>
+</head>
+<body>
+
+<!-- ══ SETUP BANNER ══ -->
+<div id="setupBanner">
+  <span>⚙️ <strong>Apps Script URL:</strong></span>
+  <div id="scriptUrlWrap">
+    <input type="text" id="scriptUrlInput" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"/>
+    <button id="saveUrlBtn" onclick="saveScriptUrl()">Save & Connect</button>
+    <button id="initBtn" onclick="initSheets()" title="Creates Leaves & Users sheets with sample data">🗂 Init Sheets</button>
+  </div>
+  <span id="connectedLabel" style="display:none;color:#6ee7b7;font-weight:700;">✅ Connected!</span>
+</div>
+
+<!-- ══ LOADING ══ -->
+<div id="loadingOverlay" style="display:none;">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Loading…</div>
+</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">TeamFlow <span class="logo-dot"></span></div>
+    <div class="admin-badge">Team Lead Admin Panel</div>
+    <div class="error-msg" id="loginError">Invalid credentials.</div>
+    <div class="field"><label>Username</label><input type="text" id="userInput" placeholder="teamlead"/></div>
+    <div class="field"><label>Password</label><input type="password" id="passInput" placeholder="lead123"/></div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">Sign In as Team Lead →</button>
+    <div class="login-link">Team member? <a href="team-portal.html" target="_blank">Member Portal →</a></div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="appPage" style="display:none;flex-direction:column;min-height:100vh;">
+  <header>
+    <div>
+      <span class="logo">TeamFlow</span><span class="logo-tag">ADMIN</span>
+      <span class="gs-badge">📊 Google Sheets</span>
+    </div>
+    <div class="header-right">
+      <span class="last-sync" id="lastSync"></span>
+      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh</button>
+      <div class="notif-wrap" onclick="showPage('requests',null)">🔔<span class="notif-dot" id="notifDot"></span></div>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="main">
+    <nav>
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard',this)"><div class="nav-left">📊 Dashboard</div></div>
+      <div class="nav-section">Management</div>
+      <div class="nav-item" id="nav-requests" onclick="showPage('requests',this)">
+        <div class="nav-left">📥 Leave Requests</div>
+        <span class="nav-count" id="pendingCount" style="display:none;">0</span>
+      </div>
+      <div class="nav-item" id="nav-members" onclick="showPage('members',this)"><div class="nav-left">👥 Team Members</div></div>
+      <div class="nav-item" id="nav-calendar" onclick="showPage('calendar',this)"><div class="nav-left">📅 Team Calendar</div></div>
+    </nav>
+    <div class="content">
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-title">Admin Dashboard</div>
+        <div class="page-sub">Live data from Google Sheets — all leave activity in one place</div>
+        <div class="stats">
+          <div class="stat-card gold-top"><div class="stat-label">Pending Approvals</div><div class="stat-num" id="d-pending" style="color:var(--amber);">—</div></div>
+          <div class="stat-card green-top"><div class="stat-label">Approved</div><div class="stat-num" id="d-approved" style="color:var(--avail);">—</div></div>
+          <div class="stat-card blue-top"><div class="stat-label">Total Requests</div><div class="stat-num" id="d-total" style="color:var(--navy);">—</div></div>
+          <div class="stat-card red-top"><div class="stat-label">Denied</div><div class="stat-num" id="d-denied" style="color:var(--sold);">—</div></div>
+        </div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Recent Activity</div>
+        <div id="recentActivity"><div class="empty-state"><div class="empty-icon">📭</div>No leave requests yet.</div></div>
+      </div>
+      <!-- REQUESTS -->
+      <div class="page" id="page-requests">
+        <div class="page-title">Leave Requests</div>
+        <div class="page-sub">Review and act on team member applications — saved directly to Google Sheets</div>
+        <div class="filters">
+          <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+          <button class="filter-btn" onclick="setFilter('pending',this)">🟡 Pending</button>
+          <button class="filter-btn" onclick="setFilter('approved',this)">🟢 Approved</button>
+          <button class="filter-btn" onclick="setFilter('denied',this)">🔴 Denied</button>
+          <button class="filter-btn" onclick="setFilter('weekoff',this)">🌿 Week-offs</button>
+          <button class="filter-btn" onclick="setFilter('leave',this)">🏖️ Leaves</button>
+        </div>
+        <div class="request-list" id="requestList"></div>
+      </div>
+      <!-- MEMBERS -->
+      <div class="page" id="page-members">
+        <div class="page-title">Team Members</div>
+        <div class="page-sub">Leave balances for all team members — from Google Sheets</div>
+        <div class="table-wrap"><table><thead><tr><th>Member</th><th>Week-offs Used</th><th>Quota Left</th><th>Pending</th><th>Approved</th><th>Denied</th></tr></thead><tbody id="membersTable"></tbody></table></div>
+      </div>
+      <!-- CALENDAR -->
+      <div class="page" id="page-calendar">
+        <div class="page-title">Team Calendar</div>
+        <div class="page-sub">See who's off on any given day — live from Google Sheets</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--amber);"></div>Pending</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--avail);"></div>Approved Week-off</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--navy);"></div>Approved Leave</div>
+        </div>
+        <div class="cal-header">
+          <button class="cal-nav" onclick="changeMonth(-1)">← Prev</button>
+          <div class="cal-month" id="calMonth"></div>
+          <button class="cal-nav" onclick="changeMonth(1)">Next →</button>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-days-header"><div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div></div>
+          <div class="cal-cells" id="calCells"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const URL_KEY='tf_script_url';
+let SCRIPT_URL=localStorage.getItem(URL_KEY)||'';
+let allLeaves=[],filterMode='all',calDate=new Date();
+const COLORS=['#6b1a1a','#1e3a6e','#2e7d52','#c94040','#c47f17','#7b3f9e','#d4a843','#1a6b5a','#8b2525','#3a4f8b'];
+const WEEKOFF_QUOTA=7;
+
+window.addEventListener('DOMContentLoaded',()=>{
+  if(SCRIPT_URL){document.getElementById('scriptUrlInput').value=SCRIPT_URL;document.getElementById('connectedLabel').style.display='inline-flex';document.getElementById('saveUrlBtn').textContent='✓ Connected';}
+});
+
+function saveScriptUrl(){const url=document.getElementById('scriptUrlInput').value.trim();if(!url.startsWith('https://script.google.com')){showToast('Please enter a valid Google Apps Script URL','error');return;}SCRIPT_URL=url;localStorage.setItem(URL_KEY,url);document.getElementById('connectedLabel').style.display='inline-flex';document.getElementById('saveUrlBtn').textContent='✓ Connected';showToast('✅ URL saved!','success');}
+
+async function initSheets(){
+  if(!SCRIPT_URL){showToast('Set Script URL first!','error');return;}
+  showLoading('Initializing Google Sheets…');
+  try{const data=await api({action:'initSheet'});showToast('✅ '+data.message,'success');}
+  catch(e){showToast('❌ '+e.message,'error');}
+  finally{hideLoading();}
+}
+
+async function api(params){
+  if(!SCRIPT_URL){showToast('⚠️ Set your Google Apps Script URL first!','error');throw new Error('No script URL');}
+  const url=SCRIPT_URL+'?'+new URLSearchParams(params).toString();
+  const res=await fetch(url);
+  const data=await res.json();
+  if(!data.ok) throw new Error(data.error||'API error');
+  return data;
+}
+
+function showLoading(text='Loading…'){document.getElementById('loadingText').textContent=text;document.getElementById('loadingOverlay').style.display='flex';}
+function hideLoading(){document.getElementById('loadingOverlay').style.display='none';}
+
+async function doLogin(){
+  const u=document.getElementById('userInput').value.trim(),p=document.getElementById('passInput').value;
+  const err=document.getElementById('loginError'),btn=document.getElementById('loginBtn');
+  btn.disabled=true;btn.textContent='Signing in…';showLoading('Verifying credentials…');
+  try{
+    const data=await api({action:'login',username:u,password:p});
+    if(data.user.role!=='lead'){throw new Error('This portal is for team leads only.');}
+    err.style.display='none';
+    document.getElementById('loginPage').style.display='none';
+    document.getElementById('appPage').style.display='flex';
+    await refreshAll();
+  }catch(e){err.textContent=e.message;err.style.display='block';}
+  finally{hideLoading();btn.disabled=false;btn.textContent='Sign In as Team Lead →';}
+}
+
+function doLogout(){document.getElementById('appPage').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('userInput').value='';document.getElementById('passInput').value='';allLeaves=[];}
+
+async function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const navEl=el||document.getElementById('nav-'+id);
+  if(navEl)navEl.classList.add('active');
+  showLoading('Loading from Google Sheets…');
+  try{
+    if(id==='members'){const d=await api({action:'getMembers'});renderMembers(d.members);}
+    else{const d=await api({action:'getAllLeaves'});allLeaves=d.leaves||[];if(id==='dashboard')renderDashboard();if(id==='requests')renderRequests();if(id==='calendar')renderCalendar();}
+  }catch(e){showToast('❌ '+e.message,'error');}
+  finally{hideLoading();}
+}
+
+async function refreshAll(){
+  showLoading('Syncing with Google Sheets…');
+  try{
+    const d=await api({action:'getAllLeaves'});
+    allLeaves=d.leaves||[];
+    renderDashboard();updatePendingBadge();
+    document.getElementById('lastSync').textContent='Last sync: '+new Date().toLocaleTimeString();
+  }catch(e){showToast('❌ '+e.message,'error');}
+  finally{hideLoading();}
+}
+
+function renderDashboard(){
+  document.getElementById('d-pending').textContent=allLeaves.filter(l=>l.status==='pending').length;
+  document.getElementById('d-approved').textContent=allLeaves.filter(l=>l.status==='approved').length;
+  document.getElementById('d-total').textContent=allLeaves.length;
+  document.getElementById('d-denied').textContent=allLeaves.filter(l=>l.status==='denied').length;
+  updatePendingBadge();
+  const recent=allLeaves.slice(0,8);
+  document.getElementById('recentActivity').innerHTML=recent.length?`<div class="request-list">${recent.map(l=>reqCard(l,true)).join('')}</div>`:`<div class="empty-state"><div class="empty-icon">📭</div>No leave requests yet.</div>`;
+}
+
+function updatePendingBadge(){const c=allLeaves.filter(l=>l.status==='pending').length;document.getElementById('pendingCount').textContent=c;document.getElementById('pendingCount').style.display=c?'inline-flex':'none';document.getElementById('notifDot').style.display=c?'block':'none';}
+
+function setFilter(f,el){filterMode=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');renderRequests();}
+
+function renderRequests(){
+  let list=allLeaves;
+  if(filterMode==='pending')list=list.filter(l=>l.status==='pending');
+  else if(filterMode==='approved')list=list.filter(l=>l.status==='approved');
+  else if(filterMode==='denied')list=list.filter(l=>l.status==='denied');
+  else if(filterMode==='weekoff')list=list.filter(l=>l.type==='weekoff');
+  else if(filterMode==='leave')list=list.filter(l=>l.type==='leave');
+  const el=document.getElementById('requestList');
+  if(!list.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">✅</div>No requests to show.</div>`;return;}
+  el.innerHTML=list.map(l=>reqCard(l,false)).join('');
+}
+
+function reqCard(l,compact){
+  const uList=['alice','bob','carol','dave','eve','frank','grace','henry','iris','jack','teamlead'];
+  const idx=uList.indexOf(l.user);
+  const color=COLORS[Math.max(0,idx)%COLORS.length];
+  const initials=(l.userName||l.user).split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  const badge=l.status==='pending'?`<span class="badge badge-pending">🟡 Pending</span>`:l.status==='approved'?`<span class="badge badge-approved">🟢 Approved</span>`:`<span class="badge badge-denied">🔴 Denied</span>`;
+  const actions=(!compact&&l.status==='pending')?`<div class="req-actions"><button class="act-btn approve-btn" onclick="actLeave('${l.id}','approved')">✓ Approve</button><button class="act-btn deny-btn" onclick="actLeave('${l.id}','denied')">✕ Deny</button></div>`:`<div>${badge}</div>`;
+  const reason=l.reason?`<span class="chip">💬 ${l.reason}</span>`:'';
+  return`<div class="request-card"><div class="req-avatar" style="background:${color}18;color:${color};border:2px solid ${color}30;">${initials}</div><div><div class="req-name">${l.userName}</div><div class="req-meta"><span>📅 ${l.date}</span><span>${l.type==='weekoff'?'🌿 Week-off':'🏖️ Leave'}</span>${badge}${reason}<span style="font-size:12px;">Applied ${l.appliedOn}</span></div></div>${actions}</div>`;
+}
+
+async function actLeave(id,status){
+  showLoading(status==='approved'?'Approving…':'Denying…');
+  try{
+    await api({action:'updateStatus',id,status});
+    allLeaves=allLeaves.map(l=>l.id===id?{...l,status}:l);
+    renderDashboard();renderRequests();
+    if(document.getElementById('page-calendar').classList.contains('active'))renderCalendar();
+    showToast(status==='approved'?'✅ Leave approved in Google Sheets!':'❌ Leave denied in Google Sheets.',status==='approved'?'success':'error');
+  }catch(e){showToast('❌ '+e.message,'error');}
+  finally{hideLoading();}
+}
+
+function renderMembers(members){
+  if(!members||!members.length){document.getElementById('membersTable').innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👥</div>No members found.</div></td></tr>`;return;}
+  const ULIST=['alice','bob','carol','dave','eve','frank','grace','henry','iris','jack'];
+  document.getElementById('membersTable').innerHTML=members.map(m=>{
+    const idx=ULIST.indexOf(m.username);const color=COLORS[Math.max(0,idx)%COLORS.length];
+    const initials=m.fullName.split(' ').map(x=>x[0]).join('');
+    const pct=Math.round(((m.weekoffUsed||0)/WEEKOFF_QUOTA)*100);
+    return`<tr><td><div style="display:flex;align-items:center;gap:10px;"><div style="width:34px;height:34px;border-radius:50%;background:${color}18;color:${color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:2px solid ${color}30;">${initials}</div><div><div style="font-weight:700;">${m.fullName}</div><div style="font-size:12px;color:var(--muted);">@${m.username}</div></div></div></td><td><div style="font-weight:700;">${m.weekoffUsed||0} / ${WEEKOFF_QUOTA}</div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--sold)':color};"></div></div></td><td><span style="color:${(m.weekoffLeft||0)<=0?'var(--sold)':'var(--avail)'};font-weight:700;">${m.weekoffLeft||0} left</span></td><td><span style="color:var(--amber);font-weight:700;">${m.pending||0}</span></td><td><span style="color:var(--avail);font-weight:700;">${m.approved||0}</span></td><td><span style="color:var(--sold);font-weight:700;">${m.denied||0}</span></td></tr>`;
+  }).join('');
+}
+
+function changeMonth(d){calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1);renderCalendar();}
+function renderCalendar(){
+  const dateMap={};allLeaves.forEach(l=>{if(!dateMap[l.date])dateMap[l.date]=[];dateMap[l.date].push(l);});
+  const today=new Date();today.setHours(0,0,0,0);
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  document.getElementById('calMonth').textContent=new Date(y,m,1).toLocaleString('default',{month:'long',year:'numeric'});
+  const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),prev=new Date(y,m,0).getDate();
+  let html='';
+  for(let i=0;i<first;i++)html+=`<div class="cal-cell other-month"><div class="cell-num">${prev-first+i+1}</div></div>`;
+  for(let d=1;d<=days;d++){
+    const date=new Date(y,m,d),ds=toDateStr(date),isToday=date.getTime()===today.getTime(),isSun=date.getDay()===0;
+    let cls='cal-cell';if(isToday)cls+=' today';if(isSun)cls+=' cell-sunday';
+    const entries=(dateMap[ds]||[]).slice(0,3);
+    const tags=entries.map(l=>{const tc=l.status==='approved'?(l.type==='weekoff'?'mt-approved':'mt-leave'):'mt-pending';return`<div class="mini-tag ${tc}">${l.type==='weekoff'?'🌿':'🏖️'} ${(l.userName||'').split(' ')[0]}</div>`;}).join('');
+    const more=(dateMap[ds]||[]).length>3?`<div class="mini-tag" style="background:var(--surface2);color:var(--muted);">+${(dateMap[ds]||[]).length-3}</div>`:'';
+    html+=`<div class="${cls}"><div class="cell-num">${d}</div><div class="cell-tags">${tags}${more}</div></div>`;
+  }
+  const total=first+days,rem=Math.ceil(total/7)*7-total;
+  for(let i=1;i<=rem;i++)html+=`<div class="cal-cell other-month"><div class="cell-num">${i}</div></div>`;
+  document.getElementById('calCells').innerHTML=html;
+}
+
+function toDateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+let toastT;function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+(type||'');clearTimeout(toastT);toastT=setTimeout(()=>{t.className='';},3500);}
+document.getElementById('passInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('userInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+// Auto-refresh every 30 seconds
+setInterval(()=>{if(document.getElementById('appPage').style.display!=='none')refreshAll();},30000);
+</script>
+</body>
+</html>
