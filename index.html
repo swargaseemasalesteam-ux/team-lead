@@ -449,9 +449,13 @@ function renderRequests(){
   el.innerHTML=list.length?list.map(l=>reqCard(l,false)).join(''):`<div class="empty-state"><div class="empty-icon">✅</div>No requests match this filter.</div>`;
 }
 
+function userColor(username){
+  // Deterministic color from username string
+  let h=0;for(let i=0;i<username.length;i++)h=(h*31+username.charCodeAt(i))%COLORS.length;
+  return COLORS[h];
+}
 function reqCard(l,compact){
-  const idx=ULIST.indexOf(l.user);
-  const color=COLORS[Math.max(0,idx)%COLORS.length];
+  const color=userColor(l.user||'');
   const initials=(l.userName||l.user).split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   const badge=`<span class="badge badge-${l.status}">${dot(l.status)} ${cap(l.status)}</span>`;
   const reason=l.reason?`<span style="font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:5px;color:var(--muted);">💬 ${l.reason}</span>`:'';
@@ -497,8 +501,7 @@ async function actLeave(id,status){
 function renderMembers(members){
   if(!members||!members.length){document.getElementById('membersTable').innerHTML=`<tr><td colspan="7"><div class="empty-state">No members found.</div></td></tr>`;return;}
   document.getElementById('membersTable').innerHTML=members.map(m=>{
-    const idx=ULIST.indexOf(m.username);
-    const color=COLORS[Math.max(0,idx)%COLORS.length];
+    const color=userColor(m.username||'');
     const initials=m.fullName.split(' ').map(x=>x[0]).join('');
     const used=m.weekoffUsed||0;
     const pct=Math.round((used/quota)*100);
@@ -522,8 +525,12 @@ function renderMembers(members){
 // ── ATTENDANCE ────────────────────────────
 function renderAttendancePage(){
   // Build member filter buttons
-  const members=['all',...ULIST];
-  const memberNames={all:'All Members',alice:'Alice',bob:'Bob',carol:'Carol',dave:'Dave',eve:'Eve',frank:'Frank',grace:'Grace',henry:'Henry',iris:'Iris',jack:'Jack'};
+  // Build member list from actual attendance data
+  const memberSet=new Set(allAttendance.map(a=>a.user));
+  const members=['all',...memberSet];
+  // Build name map dynamically from attendance records
+  const memberNames={all:'All Members'};
+  allAttendance.forEach(a=>{if(a.user&&a.userName)memberNames[a.user]=a.userName.split(' ')[0];});
   document.getElementById('attFilters').innerHTML=members.map(u=>
     `<button class="filter-btn${u===attFilter?' active':''}" onclick="setAttFilter('${u}',this)">${u==='all'?'👥 All Members':memberNames[u]||u}</button>`
   ).join('');
@@ -540,8 +547,7 @@ function renderAttendanceTable(){
   const tbody=document.getElementById('attendanceTable');
   if(!list.length){tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🕐</div>No attendance records yet.</div></td></tr>`;return;}
   tbody.innerHTML=[...list].reverse().map(r=>{
-    const idx=ULIST.indexOf(r.user);
-    const color=COLORS[Math.max(0,idx)%COLORS.length];
+    const color=userColor(r.user||'');
     const initials=(r.userName||r.user).split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
     return`<tr>
       <td><strong>${r.date}</strong></td>
