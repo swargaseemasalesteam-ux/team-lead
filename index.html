@@ -177,7 +177,7 @@ tr:hover td{background:var(--surface2);}
 <div id="appPage">
   <header>
     <div style="display:flex;align-items:center;">
-      <span class="logo">TeamFlow</span><span class="logo-tag">ADMIN</span><span class="gs-badge">📊 Live Sheets</span>
+      <span class="logo">TeamFlow</span><span class="logo-tag">ADMIN</span><span class="gs-badge">📊 Live Sheets</span><span id="teamLabel" style="margin-left:10px;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,0.15);color:#fff;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;"></span>
     </div>
     <div class="header-right">
       <span class="last-sync" id="lastSync"></span>
@@ -305,8 +305,7 @@ tr:hover td{background:var(--surface2);}
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzz3fJL_HKm6SCglmoyk6f3vXWRidR2rffJGXD57_PV5gJHmtj4I2cS6jdV4XGIfLkw/exec';
 const COLORS=['#6b1a1a','#1e3a6e','#2e7d52','#c94040','#c47f17','#7b3f9e','#d4a843','#1a6b5a','#8b2525','#3a4f8b'];
-const ULIST=['alice','bob','carol','dave','eve','frank','grace','henry','iris','jack'];
-let allLeaves=[],allAttendance=[],quota=7,filterMode='all',calDate=new Date(),attFilter='all';
+let currentUser=null,allLeaves=[],allAttendance=[],quota=7,filterMode='all',calDate=new Date(),attFilter='all';
 
 async function api(p){
   const r=await fetch(SCRIPT_URL+'?'+new URLSearchParams(p));
@@ -333,15 +332,19 @@ async function doLogin(){
   try{
     const d=await api({action:'login',username:u,password:p});
     if(d.user.role!=='lead')throw new Error('This portal is for team leads only.');
+    currentUser=d.user;
     err.style.display='none';
     document.getElementById('loginPage').style.display='none';
     document.getElementById('appPage').style.display='flex';
+    // Show team name in header
+    const tname=d.user.team==='team2'?'\ud83d\udc65 Lahari\'s Team':'\ud83d\udc65 Kumari\'s Team';
+    document.getElementById('teamLabel').textContent=tname;
     await refreshAll();
   }catch(e){err.textContent=e.message;err.style.display='block';}
   finally{hideLoading();btn.disabled=false;btn.textContent='Sign In as Team Lead →';}
 }
 function doLogout(){
-  allLeaves=[];allAttendance=[];
+  currentUser=null;allLeaves=[];allAttendance=[];
   document.getElementById('appPage').style.display='none';
   document.getElementById('loginPage').style.display='flex';
   document.getElementById('userInput').value='';document.getElementById('passInput').value='';
@@ -351,9 +354,9 @@ async function refreshAll(){
   showLoading('Syncing with Google Sheets…');
   try{
     const [lv,att,q]=await Promise.all([
-      api({action:'getAllLeaves'}),
-      api({action:'getAllAttendance'}),
-      api({action:'getQuota'})
+      api({action:'getAllLeaves',team:currentUser.team}),
+      api({action:'getAllAttendance',team:currentUser.team}),
+      api({action:'getQuota',team:currentUser.team})
     ]);
     allLeaves=lv.leaves||[];
     allAttendance=att.records||[];
@@ -373,16 +376,16 @@ async function showPage(id,el){
   showLoading('Loading from Google Sheets…');
   try{
     const [lv,att,q]=await Promise.all([
-      api({action:'getAllLeaves'}),
-      api({action:'getAllAttendance'}),
-      api({action:'getQuota'})
+      api({action:'getAllLeaves',team:currentUser.team}),
+      api({action:'getAllAttendance',team:currentUser.team}),
+      api({action:'getQuota',team:currentUser.team})
     ]);
     allLeaves=lv.leaves||[];
     allAttendance=att.records||[];
     quota=q.quota||7;
     if(id==='dashboard')renderDashboard();
     if(id==='requests')renderRequests();
-    if(id==='members'){const m=await api({action:'getMembers'});renderMembers(m.members);}
+    if(id==='members'){const m=await api({action:'getMembers',team:currentUser.team});renderMembers(m.members);}
     if(id==='attendance')renderAttendancePage();
     if(id==='calendar')renderCalendar();
   }catch(e){showToast('❌ '+e.message,'error');}
@@ -399,7 +402,7 @@ async function saveQuota(){
   if(isNaN(val)||val<0||val>31){showToast('❌ Enter a number between 0 and 31','error');return;}
   showLoading('Saving quota to Google Sheets…');
   try{
-    await api({action:'setQuota',quota:val});
+    await api({action:'setQuota',quota:val,team:currentUser.team});
     quota=val;
     document.getElementById('quotaDisplay').textContent=val;
     document.getElementById('quotaInput').value=val;
